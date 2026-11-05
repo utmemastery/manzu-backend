@@ -239,13 +239,16 @@ const loginSchema = z.object({
 });
 
 
+// Managers may only create/assign these roles (MANAGER/OWNER/ADMIN are not delegable).
+const ASSIGNABLE_STAFF_ROLES = ['PHARMACIST', 'STAFF', 'TECHNICIAN'];
+
 const addUserSchema = z.object({
   name: z.string().min(1, 'User name required'),
   email: z.string().email('Invalid email'),
   pin: z.string()
   .length(6, 'PIN must be exactly 6 digits')
   .regex(/^\d{6}$/, 'PIN must contain only numbers'),
-  role: z.enum(['MANAGER', 'PHARMACIST', 'ADMIN', 'STAFF', 'OWNER', 'TECHNICIAN'], 'Role must be a valid pharmacy user role'),
+  role: z.enum(ASSIGNABLE_STAFF_ROLES, 'Role must be PHARMACIST, STAFF or TECHNICIAN'),
 });
 
 
@@ -255,7 +258,7 @@ const editUserSchema = z.object({
   pin: z.string()
   .length(6, 'PIN must be exactly 6 digits')
   .regex(/^\d{6}$/, 'PIN must contain only numbers').optional(),
-  role: z.enum(['MANAGER', 'PHARMACIST', 'ADMIN', 'STAFF', 'OWNER', 'TECHNICIAN']).optional(),
+  role: z.enum(ASSIGNABLE_STAFF_ROLES, 'Role must be PHARMACIST, STAFF or TECHNICIAN').optional(),
 });
 
 const editProfileSchema = z.object({

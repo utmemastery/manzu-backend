@@ -13,7 +13,7 @@ const pharmacyPayoutsService = require('../domains/pharmacy/payouts/pharmacy-pay
 const { validateFetchOrders, validateUpdateOrder, 
   validateFetchMedications, validateAddMedication, validateBulkUpdateOrders, validateUpdateMedication, 
   validateDeleteMedication, validateFetchUsers, validateRegisterDevice, validateOrderId } = require('../utils/validation');
-const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { authenticatePharmacy, authorizeRoles } = require('../middleware/auth');
 const router = express.Router();
 const supabase = require('../utils/supabaseClient')
 
@@ -46,7 +46,7 @@ console.log('Loaded pharmacy.js version: 2025-06-19-v3 (deep linking support)');
 // ======================
 
 // GET /pharmacy/banking/banks - Get list of Nigerian banks
-router.get('/banking/banks', authenticate, async (req, res) => {
+router.get('/banking/banks', authenticatePharmacy, async (req, res) => {
   try {
     const banks = await pharmacyBankingService.getNigerianBanks();
     res.status(200).json({ banks });
@@ -57,7 +57,7 @@ router.get('/banking/banks', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/banking/status - Check banking setup status
-router.get('/banking/status', authenticate, async (req, res) => {
+router.get('/banking/status', authenticatePharmacy, async (req, res) => {
   try {
     const status = await pharmacyBankingService.getBankingStatus(req.user.pharmacyId);
     res.status(200).json(status);
@@ -68,7 +68,7 @@ router.get('/banking/status', authenticate, async (req, res) => {
 });
 
 // POST /pharmacy/banking/setup - Setup bank account
-router.post('/banking/setup', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.post('/banking/setup', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { accountNumber, bankCode, bankName } = req.body;
 
@@ -99,7 +99,7 @@ router.post('/banking/setup', authenticate, authorizeRoles('MANAGER'), async (re
 });
 
 // PUT /pharmacy/banking/update - Update bank account
-router.put('/banking/update', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.put('/banking/update', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { accountNumber, bankCode, bankName } = req.body;
 
@@ -125,7 +125,7 @@ router.put('/banking/update', authenticate, authorizeRoles('MANAGER'), async (re
 });
 
 // POST /pharmacy/banking/verify - Verify bank account (before saving)
-router.post('/banking/verify', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.post('/banking/verify', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { accountNumber, bankCode } = req.body;
 
@@ -165,7 +165,7 @@ router.post('/banking/verify', authenticate, authorizeRoles('MANAGER'), async (r
 // ======================
 
 // GET /pharmacy/payouts/summary - Get payout summary
-router.get('/payouts/summary', authenticate, async (req, res) => {
+router.get('/payouts/summary', authenticatePharmacy, async (req, res) => {
   try {
     const summary = await pharmacyPayoutsService.getPayoutSummary(req.user.pharmacyId);
     res.status(200).json({
@@ -182,7 +182,7 @@ router.get('/payouts/summary', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/payouts/history - Get payout history
-router.get('/payouts/history', authenticate, async (req, res) => {
+router.get('/payouts/history', authenticatePharmacy, async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
 
@@ -205,7 +205,7 @@ router.get('/payouts/history', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/orders/pending-payout - Get orders awaiting payout
-router.get('/orders/pending-payout', authenticate, async (req, res) => {
+router.get('/orders/pending-payout', authenticatePharmacy, async (req, res) => {
   try {
     const orders = await pharmacyPayoutsService.getOrdersPendingPayout(req.user.pharmacyId);
     
@@ -231,7 +231,7 @@ router.get('/orders/pending-payout', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/earnings/analytics - Get earnings analytics
-router.get('/earnings/analytics', authenticate, async (req, res) => {
+router.get('/earnings/analytics', authenticatePharmacy, async (req, res) => {
   try {
     const { period = 'week' } = req.query; // week, month, year
 
@@ -310,7 +310,7 @@ router.get('/earnings/analytics', authenticate, async (req, res) => {
 
 // POST /pharmacy/profile/logo - Upload pharmacy logo
 router.post('/profile/logo', 
-  authenticate, 
+  authenticatePharmacy, 
   authorizeRoles('MANAGER'), 
   upload.single('logo'),
   async (req, res) => {
@@ -381,7 +381,7 @@ router.post('/profile/logo',
 
 
 // GET /pharmacy/orders - Fetch orders for pharmacy (new schema)
-router.get('/orders', authenticate, async (req, res) => {
+router.get('/orders', authenticatePharmacy, async (req, res) => {
   try {
     const { error, value } = validateFetchOrders(req.query);
     if (error) {
@@ -411,7 +411,7 @@ router.get('/orders', authenticate, async (req, res) => {
 
 
 // PATCH /pharmacy/orders/bulk - Bulk update order statuses
-router.patch('/orders/bulk', authenticate, async (req, res) => {
+router.patch('/orders/bulk', authenticatePharmacy, async (req, res) => {
   try {
     const { orderIds, status, cancelReason } = req.body;
 
@@ -444,7 +444,7 @@ router.patch('/orders/bulk', authenticate, async (req, res) => {
 
 
 
-router.get('/orders/:orderId', authenticate, async (req, res) => {
+router.get('/orders/:orderId', authenticatePharmacy, async (req, res) => {
   try {
     const { orderId } = req.params;
     
@@ -485,7 +485,7 @@ router.get('/orders/:orderId', authenticate, async (req, res) => {
 
 
 // PATCH /pharmacy/orders/:orderId - Update order status (new schema)
-router.patch('/orders/:orderId', authenticate, async (req, res) => {
+router.patch('/orders/:orderId', authenticatePharmacy, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
@@ -507,7 +507,7 @@ router.patch('/orders/:orderId', authenticate, async (req, res) => {
 
 
 // GET /pharmacy/medications/catalog - NEW unified endpoint
-router.get('/medications/catalog', authenticate, async (req, res) => {
+router.get('/medications/catalog', authenticatePharmacy, async (req, res) => {
   try {
     const { error, value } = validateFetchMedications(req.query);
     if (error) {
@@ -534,7 +534,7 @@ router.get('/medications/catalog', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/medications - Keep for backward compatibility
-router.get('/medications', authenticate, async (req, res) => {
+router.get('/medications', authenticatePharmacy, async (req, res) => {
   try {
     const { error, value } = validateFetchMedications(req.query);
     if (error) {
@@ -564,7 +564,7 @@ router.get('/medications', authenticate, async (req, res) => {
 });
 
 // POST /pharmacy/medications - Simplified (now upserts)
-router.post('/medications', authenticate, async (req, res) => {
+router.post('/medications', authenticatePharmacy, async (req, res) => {
   try {
     const { medicationId, stock, price, receivedDate, expiryDate, batchNumber } = req.body;
 
@@ -600,7 +600,7 @@ router.post('/medications', authenticate, async (req, res) => {
 });
 
 // PATCH /pharmacy/medications/:medicationId - Now also uses upsert
-router.patch('/medications/:medicationId', authenticate, async (req, res) => {
+router.patch('/medications/:medicationId', authenticatePharmacy, async (req, res) => {
   try {
     const { medicationId } = req.params;
     const { stock, price, receivedDate, expiryDate, batchNumber } = req.body;
@@ -636,7 +636,7 @@ router.patch('/medications/:medicationId', authenticate, async (req, res) => {
 });
 
 // DELETE remains the same
-router.delete('/medications/:medicationId', authenticate, async (req, res) => {
+router.delete('/medications/:medicationId', authenticatePharmacy, async (req, res) => {
   try {
     const { medicationId } = req.params;
 
@@ -655,7 +655,7 @@ router.delete('/medications/:medicationId', authenticate, async (req, res) => {
 
 
 // GET /pharmacy/users - Fetch pharmacy users (manager only)
-router.get('/users', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.get('/users', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     // Validate input (no query params to validate)
     const { error } = validateFetchUsers({});
@@ -673,7 +673,7 @@ router.get('/users', authenticate, authorizeRoles('MANAGER'), async (req, res) =
 });
 
 // POST /pharmacy/notifications/register - Device registration for notifications (new schema)
-router.post('/notifications/register', authenticate, async (req, res) => {
+router.post('/notifications/register', authenticatePharmacy, async (req, res) => {
   try {
     const { deviceToken } = req.body;
 
@@ -693,7 +693,7 @@ router.post('/notifications/register', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/profile - Get pharmacy profile details (new schema)
-router.get('/profile', authenticate, async (req, res) => {
+router.get('/profile', authenticatePharmacy, async (req, res) => {
   try {
     const { userId, pharmacyId } = req.user;
     const { user, pharmacy } = await pharmacyProfileService.getProfile(userId, pharmacyId);
@@ -709,7 +709,7 @@ router.get('/profile', authenticate, async (req, res) => {
 });
 
 // PATCH /pharmacy/profile - Edit pharmacy profile (manager only, new schema)
-router.patch('/profile', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.patch('/profile', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { user, pharmacy } = require('../utils/adminValidation').editProfileSchema.parse(req.body);
     const { userId, pharmacyId } = req.user;
@@ -740,7 +740,7 @@ router.patch('/profile', authenticate, authorizeRoles('MANAGER'), async (req, re
 
 
 // GET /pharmacy/operating-hours - Get operating hours
-router.get('/operating-hours', authenticate, async (req, res) => {
+router.get('/operating-hours', authenticatePharmacy, async (req, res) => {
   try {
     const operatingHours = await prisma.operatingHour.findMany({
       where: { pharmacyId: req.user.pharmacyId },
@@ -766,7 +766,7 @@ router.get('/operating-hours', authenticate, async (req, res) => {
 });
 
 // POST /pharmacy/operating-hours - Set operating hours
-router.post('/operating-hours', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.post('/operating-hours', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { hours } = req.body;
     
@@ -813,7 +813,7 @@ router.post('/operating-hours', authenticate, authorizeRoles('MANAGER'), async (
 
 
 // GET /pharmacy/dashboard - Dashboard summary for pharmacy 
-router.get('/dashboard', authenticate, async (req, res) => {
+router.get('/dashboard', authenticatePharmacy, async (req, res) => {
   try {
     const data = await pharmacyDashboardService.getDashboardData(req.user.pharmacyId);
     res.status(200).json({ message: 'Dashboard data fetched', ...data });
@@ -824,7 +824,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
 });
 
 // GET /pharmacy/analytics/weekly - Weekly analytics
-router.get('/analytics/weekly', authenticate, async (req, res) => {
+router.get('/analytics/weekly', authenticatePharmacy, async (req, res) => {
   try {
     const data = await pharmacyDashboardService.getWeeklyAnalytics(req.user.pharmacyId);
     res.status(200).json({ message: 'Weekly analytics fetched', ...data });
@@ -835,7 +835,7 @@ router.get('/analytics/weekly', authenticate, async (req, res) => {
 });
 
 // POST /pharmacy/sales - Record a new PoS sale (new schema)
-router.post('/sales', authenticate, async (req, res) => {
+router.post('/sales', authenticatePharmacy, async (req, res) => {
   try {
     const { items, total, paymentMethod } = req.body;
     if (!items || !Array.isArray(items) || !total || !paymentMethod) {
@@ -856,7 +856,7 @@ router.post('/sales', authenticate, async (req, res) => {
 
 
 // GET /pharmacy/sales - Fetch sales with pagination and filters
-router.get('/sales', authenticate, async (req, res) => {
+router.get('/sales', authenticatePharmacy, async (req, res) => {
   try {
     const { 
       date, startDate, endDate, paymentMethod, minAmount, maxAmount,
@@ -928,7 +928,7 @@ router.get('/sales', authenticate, async (req, res) => {
 
 
 // New export endpoint
-router.get('/sales/export', authenticate, async (req, res) => {
+router.get('/sales/export', authenticatePharmacy, async (req, res) => {
   try {
     const { date, startDate, endDate, paymentMethod } = req.query;
     
@@ -981,44 +981,9 @@ router.get('/sales/export', authenticate, async (req, res) => {
 });
 
 
-// POST /pharmacy/change-password - Change password
-router.post('/change-password', authenticate, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: 'Current and new passwords are required' });
-    }
-
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'New password must be at least 8 characters' });
-    }
-
-    // Get current user
-    const user = await prisma.pharmacyUser.findUnique({
-      where: { id: req.user.userId }
-    });
-
-    // Verify current password
-    const isValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isValid) {
-      return res.status(401).json({ message: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    await prisma.pharmacyUser.update({
-      where: { id: req.user.userId },
-      data: { password: hashedPassword }
-    });
-
-    res.status(200).json({ message: 'Password changed successfully' });
-  } catch (error) {
-    console.error('Change password error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+// POST /pharmacy/change-password - Removed: it wrote an 8+ char password over the PIN hash and locked users out of PIN login.
+router.post('/change-password', authenticatePharmacy, (req, res) => {
+  res.status(410).json({ error: 'GONE', message: 'Use PATCH /api/auth/change-password with { currentPin, newPin }' });
 });
 
 

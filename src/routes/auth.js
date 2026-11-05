@@ -4,7 +4,7 @@ const express = require('express');
 const pharmacyAuthService = require('../domains/auth/pharmacy/pharmacy-auth.service');
 const adminAuthService = require('../domains/auth/admin/admin-auth.service');
 const { registerSchema, loginSchema, addUserSchema, editUserSchema, adminRegisterSchema, adminLoginSchema } = require('../utils/adminValidation');
-const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { authenticatePharmacy, authorizeRoles } = require('../middleware/auth');
 const router = express.Router();
 
 console.log('✅ Auth routes loaded - using domain services with repository pattern');
@@ -89,7 +89,7 @@ router.post('/admin/login', async (req, res) => {
 });
 
 // POST /auth/add-user - Add new pharmacy user (manager only)
-router.post('/add-user', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.post('/add-user', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { name, email, pin, role } = addUserSchema.parse(req.body);
     const pharmacyId = req.user.pharmacyId;
@@ -108,16 +108,16 @@ router.post('/add-user', authenticate, authorizeRoles('MANAGER'), async (req, re
 });
 
 // PATCH /auth/users/:userId - Edit pharmacy user (manager only)
-router.patch('/users/:userId', authenticate, authorizeRoles('MANAGER'), async (req, res) => {
+router.patch('/users/:userId', authenticatePharmacy, authorizeRoles('MANAGER'), async (req, res) => {
   try {
     const { userId } = req.params;
     if (isNaN(parseInt(userId))) {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
-    const { name, email, pin } = editUserSchema.parse(req.body);
+    const { name, email, pin, role } = editUserSchema.parse(req.body);
     const managerId = req.user.userId;
     const pharmacyId = req.user.pharmacyId;
-    const updatedUser = await pharmacyAuthService.editPharmacyUser(Number(userId), { name, email, pin }, managerId, pharmacyId);
+    const updatedUser = await pharmacyAuthService.editPharmacyUser(Number(userId), { name, email, pin, role }, managerId, pharmacyId);
     res.status(200).json({
       message: 'User updated successfully',
       user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role && updatedUser.role.toUpperCase() },
@@ -133,7 +133,7 @@ router.patch('/users/:userId', authenticate, authorizeRoles('MANAGER'), async (r
 
 
 // DELETE /auth/users/:userId - Delete pharmacy user (manager only)
-router.delete('/users/:userId', authenticate, authorizeRoles( 'MANAGER'), async (req, res) => {
+router.delete('/users/:userId', authenticatePharmacy, authorizeRoles( 'MANAGER'), async (req, res) => {
   try {
     const { userId } = req.params;
     if (isNaN(parseInt(userId))) {
@@ -151,7 +151,7 @@ router.delete('/users/:userId', authenticate, authorizeRoles( 'MANAGER'), async 
 
 
 // PATCH /auth/change-password - Change pharmacy user PIN
-router.patch('/change-password', authenticate, async (req, res) => {
+router.patch('/change-password', authenticatePharmacy, async (req, res) => {
   try {
     const { currentPin, newPin } = req.body;
 

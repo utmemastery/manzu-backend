@@ -44,13 +44,29 @@ function authenticate(req, res, next) {
   }
 }
 
+// Role names overlap (PharmacyUserRole also has ADMIN), so a role only counts with the matching token type.
+const ADMIN_ROLES = new Set(['ADMIN', 'SUPER_ADMIN', 'SUPPORT']);
+
+function isAdminToken(user) {
+  return Boolean(user && user.adminId && !user.pharmacyId);
+}
+
+function isPharmacyToken(user) {
+  return Boolean(user && user.userId && user.pharmacyId && !user.adminId);
+}
+
+function hasRole(user, allowedRoles) {
+  if (!user || !allowedRoles.includes(user.role)) return false;
+  return ADMIN_ROLES.has(user.role) ? isAdminToken(user) : isPharmacyToken(user);
+}
+
 /**
  * Middleware: Authorize by role(s)
  * Usage: authorizeRoles('ADMIN', 'SUPER_ADMIN')
  */
 function authorizeRoles(...allowedRoles) {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    if (!hasRole(req.user, allowedRoles)) {
       logger.error('Authorization failed: Insufficient permissions', { userId: req.user?.userId, adminId: req.user?.adminId, role: req.user?.role });
       return res.status(403).json({ error: 'FORBIDDEN', message: 'You do not have permission to perform this action' });
     }
@@ -58,4 +74,18 @@ function authorizeRoles(...allowedRoles) {
   };
 }
 
-module.exports = { authenticate, authorizeRoles };
+function requireTokenType(check, label) {
+  return (req, res, next) => {
+    if (!check(req.user)) {
+      logger.error(`Authorization failed: ${label} token required`, { userId: req.user?.userId, adminId: req.user?.adminId });
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'You do not have permission to perform this action' });
+    }
+    next();
+  };
+}
+
+// Express accepts arrays of middleware, so these drop in where `authenticate` was used.
+const authenticatePharmacy = [authenticate, requireTokenType(isPharmacyToken, 'Pharmacy')];
+const authenticateAdmin = [authenticate, requireTokenType(isAdminToken, 'Admin')];
+
+module.exports = { authenticate, authenticatePharmacy, authenticateAdmin, authorizeRoles };
