@@ -155,14 +155,6 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
-// ====== DEBUG HEADER LOGGING ======
-// Log every request's method, path, and headers
-app.use((req, res, next) => {
-  console.log(`\n[${req.method}] ${req.originalUrl}`);
-  console.log('Headers:', req.headers);
-  next();
-});
-
 // Special log for preflight OPTIONS requests
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
